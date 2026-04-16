@@ -62,7 +62,7 @@ def PlotAirlines (aircrafts):
         cont[airline] = cont[airline] + 1
     plt.bar(cont.keys(), cont.values(), color='#32612d')
     plt.xlabel('Airlines')
-    plt.ylabel('Vuelos')
+    plt.ylabel('Flights')
     plt.title('Flights every airline')
     plt.show()
 def PlotFlightsType (aircrafts):
