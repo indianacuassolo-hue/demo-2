@@ -1,0 +1,303 @@
+from tkinter import *
+from tkinter import messagebox
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import airport as ap
+import aircraft as ac
+import LEBL as lebl
+
+airports = []
+
+def Load():
+    airports.clear()
+    resultado = airports.extend(ap.LoadAirports(pathEntry.get()))
+    if resultado == 0:
+        messagebox.showerror("Carga de Aeropuertos", "Error al cargar el archivo.")
+    else:
+        messagebox.showinfo("Carga de Aeropuertos", "¡Aeropuertos cargados correctamente!")
+    for a in airports:
+        ap.SetSchengen(a)
+
+def Add():
+    new = ap.Airport(ICAOEntry.get(), float(latEntry.get()), float(lonEntry.get()))
+    ap.SetSchengen(new)
+    resultado = ap.AddAirport(airports, new)
+    if resultado == 0:
+        messagebox.showinfo("Agregar Aeropuerto", f"¡Aeropuerto {ICAOEntry.get()} agregado!")
+    else:
+        messagebox.showerror("Agregar Aeropuerto", f"Error: No se pudo agregar el aeropuerto {ICAOEntry.get()}.")
+
+def Remove():
+    resultado = ap.RemoveAirport(airports, ICAOEntry.get())
+    if resultado == 0:
+        messagebox.showinfo("Eliminar Aeropuerto", f"¡Aeropuerto {ICAOEntry.get()} eliminado!")
+    else:
+        messagebox.showerror("Eliminar Aeropuerto", f"Error: Aeropuerto {ICAOEntry.get()} no encontrado.")
+
+def plot():
+    if not airports:
+        messagebox.showwarning("Gráfico", "No hay aeropuertos para mostrar.")
+    ax = clear_ax()
+    ap.PlotAirports(airports, ax)
+    draw_chart()
+
+def Map():
+    if airports:
+        resultado = ap.MapAirports(airports, "airports.kml")
+        if resultado == 0:
+            messagebox.showerror("Google Earth", "Error al crear el archivo.")
+        else:
+            messagebox.showinfo("Google Earth", "¡Archivo 'airports.kml' creado para Google Earth!")
+
+def SaveSchengen():
+    if not airports:
+        print("No hay aeropuertos para guardar.")
+        return
+    resultado = ap.SaveSchengenAirports(airports, "schengen_airports.txt")
+    if resultado == 0:
+        messagebox.showinfo("Guardar Aeropuertos Schengen", "¡Aeropuertos Schengen guardados en 'schengen_airports.txt'!")
+    else:
+        messagebox.showerror("Guardar Aeropuertos Schengen", "Error al guardar o la lista estaba vacía.")
+
+aircrafts = []
+
+def LoadFlights():
+    aircrafts.clear()
+    resultado = aircrafts.extend(ac.LoadArrivals(flightPathEntry.get()))
+    if resultado == 0:
+        messagebox.showerror("Carga de Vuelos", "Error al cargar el archivo.")
+    else:
+        messagebox.showinfo("Carga de Vuelos", "¡Vuelos cargados correctamente!")
+
+def PlotArrivals():
+    ax = clear_ax()
+    ac.PlotArrivals(aircrafts, ax)
+    draw_chart()
+
+def PlotAirlines():
+    ax = clear_ax()
+    ac.PlotAirlines(aircrafts, ax)
+    draw_chart()
+
+def PlotFlightsType():
+    ax = clear_ax()
+    ac.PlotFlightsType(aircrafts, ax)
+    draw_chart()
+
+def SaveFlights():
+    if not aircrafts:
+        print("No hay vuelos para guardar.")
+    resultado = ac.SaveFlights(aircrafts, "ArrivalsFlights.txt")
+    if resultado == 0:
+        messagebox.showinfo("Guardar Vuelos", "¡Vuelos guardados en 'ArrivalsFlights.txt'!")
+    else:
+        messagebox.showerror("Guardar Vuelos", "Error al guardar o la lista estaba vacía.")
+
+def MapFlights():
+    resultado = ac.MapFlights(aircrafts)
+    if resultado == 0:
+        messagebox.showinfo("Google Earth", "¡Archivo 'flights.kml' creado para Google Earth!")
+    else:
+        messagebox.showerror("Google Earth", "Error al crear el archivo o la lista de vuelos estaba vacía.")
+
+def LongDistance():
+    long_distance = ac.LongDistanceArrivals(aircrafts)
+    print("Vuelos de larga distancia: ", len(long_distance))
+    resultado = ac.MapFlights(long_distance, "long_distance_flights.kml")
+    if resultado == 0:
+        messagebox.showinfo("Google Earth", "¡Archivo 'long_distance_flights.kml' creado para Google Earth!")
+    else:
+        messagebox.showerror("Google Earth", "Error al crear el archivo o la lista de vuelos estaba vacía.")
+
+
+# --- Version 3: Gate Management ---
+
+bcn_airport = None  # Global variable to store the airport structure
+
+def LoadAirportStructure():
+    global bcn_airport
+    bcn_airport = lebl.LoadAirportStructure(leblPathEntry.get())
+    if bcn_airport == -1:
+        messagebox.showerror("Estructura LEBL", "Error al cargar el archivo de estructura.")
+        bcn_airport = None
+    else:
+        messagebox.showinfo("Estructura LEBL", f"¡Aeropuerto {bcn_airport.code} cargado con {len(bcn_airport.terminals)} terminales!")
+
+def AssignGates():
+    global bcn_airport
+    if bcn_airport is None:
+        messagebox.showwarning("Asignar Gates", "Primero debes cargar la estructura del aeropuerto.")
+        return
+    if not aircrafts:
+        messagebox.showwarning("Asignar Gates", "Primero debes cargar los vuelos.")
+        return
+    
+    for terminal in bcn_airport.terminals:
+        for area in terminal.boarding_areas:
+            for gate in area.gate:
+                gate.ocupado = False
+                gate.aircraft = ""  
+
+    assigned = 0
+    not_assigned = 0
+    for aircraft in aircrafts:
+        resultado = lebl.AssignGate(bcn_airport, aircraft)
+        if resultado == 0:
+            assigned = assigned + 1
+        else:
+            not_assigned = not_assigned + 1
+
+    messagebox.showinfo("Asignar Gates", f"Gates asignadas: {assigned}\nGates disponibles: {not_assigned}")
+
+def ShowGateOccupancy():
+    global bcn_airport
+    if bcn_airport is None:
+        messagebox.showwarning("Ocupación de Gates", "Primero debes cargar la estructura del aeropuerto.")
+        return
+    ax = clear_ax()
+    lebl.PlotGateOccupancy(bcn_airport, ax)
+    draw_chart()
+
+def SearchAirlineTerminal():
+    global bcn_airport
+    if bcn_airport is None:
+        messagebox.showwarning("Buscar Terminal", "Primero debes cargar la estructura del aeropuerto.")
+        return
+    airline = airlineEntry.get()
+    if airline == "":
+        messagebox.showwarning("Buscar Terminal", "Introduce el código o nombre de la aerolínea.")
+        return
+    terminal_name = lebl.SearchTerminal(bcn_airport, airline)
+    if terminal_name == "":
+        messagebox.showinfo("Buscar Terminal", f"La aerolínea '{airline}' no se encontró en ningún terminal.")
+    else:
+        messagebox.showinfo("Buscar Terminal", f"La aerolínea '{airline}' opera en el terminal: {terminal_name}")
+
+def ShowAirportSchematicT1():
+    global bcn_airport
+    if bcn_airport is None:
+        messagebox.showwarning("Esquema del Aeropuerto", "Primero debes cargar la estructura del aeropuerto.")
+        return
+    ax = clear_ax()
+    # Le pasamos "T1" para que solo dibuje ese terminal
+    lebl.PlotAirportSchematic(bcn_airport, ax, "T1")
+    draw_chart()
+
+def ShowAirportSchematicT2():
+    global bcn_airport
+    if bcn_airport is None:
+        messagebox.showwarning("Esquema del Aeropuerto", "Primero debes cargar la estructura del aeropuerto.")
+        return
+    ax = clear_ax()
+    # Le pasamos "T2" para que solo dibuje ese terminal
+    lebl.PlotAirportSchematic(bcn_airport, ax, "T2")
+    draw_chart()
+
+# --- Chart setup ---
+fig = Figure(figsize=(6, 5), dpi=100)
+
+def clear_ax():
+    fig.clf()
+    return fig.add_subplot(111)
+
+def draw_chart():
+    canvas.draw()
+
+
+# --- Window setup ---
+window = Tk()
+window.title("Airport")
+window.geometry("1200x800")
+window.columnconfigure(0, weight=1)
+window.columnconfigure(1, weight=1)
+window.columnconfigure(2, weight=3)
+
+# --- Títols ---
+tituloLabel = Label(window, text="----AIRPORT----", font=("Times New Roman", 18, "bold"))
+tituloLabel.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=E+W)
+
+# --- Arxius airports ---
+archivoLabel = Label(window, text="Archivo:")
+archivoLabel.grid(row=1, column=0, padx=5, pady=5, sticky=E+W)
+
+pathEntry = Entry(window)
+pathEntry.insert(0, "Airports.txt")
+pathEntry.grid(row=1, column=1, padx=5, pady=5, sticky=E+W)
+
+# --- ICAO ---
+ICAOLabel = Label(window, text="ICAO:")
+ICAOLabel.grid(row=2, column=0, padx=5, pady=5, sticky=E+W)
+
+ICAOEntry = Entry(window)
+ICAOEntry.grid(row=2, column=1, padx=5, pady=5, sticky=E+W)
+
+# --- Coordenades ---
+latLabel = Label(window, text="Latitud:")
+latLabel.grid(row=3, column=0, padx=5, pady=5, sticky=E+W)
+latEntry = Entry(window)
+latEntry.grid(row=3, column=1, padx=5, pady=5, sticky=E+W)
+
+lonLabel = Label(window, text="Longitud:")
+lonLabel.grid(row=4, column=0, padx=5, pady=5, sticky=E+W)
+lonEntry = Entry(window)
+lonEntry.grid(row=4, column=1, padx=5, pady=5, sticky=E+W)
+
+# --- Botons airports ---
+Button(window, text="Load Airports",  bg="#F472B6", fg="white", command=Load).grid(row=5, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Add Airport",    bg="#F472B6", fg="white", command=Add).grid(row=6, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Remove Airport", bg="#F472B6", fg="white", command=Remove).grid(row=7, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Save Schengen",  bg="#F472B6", fg="white", command=SaveSchengen).grid(row=8, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Ver Gráfico",    bg="#F472B6", fg="white", command=plot).grid(row=9, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Google Earth",   bg="#F472B6", fg="white", command=Map).grid(row=10, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+
+# --- Títol flights ---
+Label(window, text="----FLIGHTS----", font=("Times New Roman", 18, "bold")).grid(row=11, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+
+# --- Arxiu flights ---
+flightArchivoLabel = Label(window, text="Archivo:")
+flightArchivoLabel.grid(row=12, column=0, padx=5, pady=5, sticky=E+W)
+
+flightPathEntry = Entry(window)
+flightPathEntry.insert(0, "Arrivals.txt")
+flightPathEntry.grid(row=12, column=1, padx=5, pady=5, sticky=E+W)
+
+# --- Botons flights ---
+Button(window, text="Load Flights",   bg="#F472B6", fg="white", command=LoadFlights).grid(row=13, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Save Flights",   bg="#F472B6", fg="white", command=SaveFlights).grid(row=14, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Plot Arrivals",  bg="#F472B6", fg="white", command=PlotArrivals).grid(row=15, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Plot Airlines",  bg="#F472B6", fg="white", command=PlotAirlines).grid(row=16, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Schengen Chart", bg="#F472B6", fg="white", command=PlotFlightsType).grid(row=17, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Google Earth",   bg="#F472B6", fg="white", command=MapFlights).grid(row=18, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Long Distance",  bg="#F472B6", fg="white", command=LongDistance).grid(row=19, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+
+# --- Títol LEBL (Version 3) ---
+Label(window, text="----GATES (LEBL)----", font=("Times New Roman", 18, "bold")).grid(row=20, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+
+# --- Arxiu estructura LEBL ---
+leblArchivoLabel = Label(window, text="Archivo:")
+leblArchivoLabel.grid(row=21, column=0, padx=5, pady=5, sticky=E+W)
+
+leblPathEntry = Entry(window)
+leblPathEntry.insert(0, "Terminals.txt")
+leblPathEntry.grid(row=21, column=1, padx=5, pady=5, sticky=E+W)
+
+# --- Aerolínia a buscar ---
+airlineLabel = Label(window, text="Aerolínea:")
+airlineLabel.grid(row=22, column=0, padx=5, pady=5, sticky=E+W)
+
+airlineEntry = Entry(window)
+airlineEntry.grid(row=22, column=1, padx=5, pady=5, sticky=E+W)
+
+# --- Botons LEBL ---
+Button(window, text="Load Airport Structure", bg="#F472B6", fg="white", command=LoadAirportStructure).grid(row=23, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Assign Gates",           bg="#F472B6", fg="white", command=AssignGates).grid(row=24, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Show Gate Occupancy",    bg="#F472B6", fg="white", command=ShowGateOccupancy).grid(row=25, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Search Airline Terminal",bg="#F472B6", fg="white", command=SearchAirlineTerminal).grid(row=26, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Show Airport Map (T1)", bg="#F472B6", fg="white", command=ShowAirportSchematicT1).grid(row=27, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(window, text="Show Airport Map (T2)", bg="#F472B6", fg="white", command=ShowAirportSchematicT2).grid(row=28, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+
+# --- Gràfic ---
+canvas = FigureCanvasTkAgg(fig, master=window)
+canvas.get_tk_widget().grid(row=2, column=2, columnspan=2, rowspan=25, padx=15, pady=15, sticky=N+S+E+W)
+
+window.mainloop()
