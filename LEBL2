@@ -1,0 +1,136 @@
+from fileinput import close
+
+
+class Gate:
+    def __init__(self, name, id, ocupado):
+        self.name = name
+        self.id = id
+        self.ocupado = False
+
+class BoardingArea:
+    def __init__(self, name, type):
+        self.name = name
+        self.type = type
+        self.gate = []
+
+class Terminal:
+    def __init__(self, name):
+        self.name = name
+        self.boarding = []
+        self.airlines = []
+        self.gates = []
+
+class BarcelonaAP:
+    def __init__(self, code):
+        self.code = code
+        self.terminals = []
+
+def SetGates (area, init_gate, end_gate, prefix):
+    init_gate = Gate()
+    #f = open("filename.txt", "r")
+    #f.close()
+    #lines = f.readline()
+    #lines = lines.split(" ")
+    #end_gate = len(lines)
+    a = BoardingArea()
+    schengenArea = ["a", "b", "c", "m", "r", "s", "u"]
+    nonschengenArea = ["d", "e", "w", "y"]
+    if init_gate >=end_gate:
+        print("Error")
+        return -1
+    while end_gate >= init_gate:
+        gate_name = prefix + str(init_gate)
+        gate = Gate(gate_name, init_gate, False)
+        area.gates.append(gate)
+    return 0
+
+def LoadAirlines (terminal, t_name):
+    filename = f"{t_name}_Airlines.txt"
+    try:
+        f = open(filename, "r")
+    except FileNotFoundError:
+        print("Error")
+        return -1
+    terminal.airlines = []
+    for line in f:
+        line = line.strip()
+        if line != "":
+            parts = line.split()
+            if len(parts) == 2:
+                airline_name = parts[0]
+                airline_code = parts[1]
+                terminal.airlines.append(airline_name, airline_code)
+            else:
+                print(f"Line format: {line}")
+    f.close()
+    return 0
+def LoadAirportStructure(filename="Terminals.txt"):
+    try:
+        f = open(filename, "r")
+    except FileNotFoundError:
+        print("Error")
+        return -1
+    bcn = BarcelonaAP("LEBL")
+    line = f.readline()
+    while line != "":
+        parts = line.strip().split()
+        if len(parts) == 2:
+            terminal_name = parts[0]
+            num_areas = int(parts[1])
+            terminal = Terminal(terminal_name)
+            j = 0
+            while j < num_areas:
+                area_line = f.readline()
+                area_parts = area_line.strip().split()
+                if len(area_parts) == 4:
+                    area_name = area_parts[0]
+                    area_type = area_parts[1]
+                    init_gate = int(area_parts[2])
+                    end_gate = int(area_parts[3])
+                    area = BoardingArea(area_name, area_type)
+                    SetGates(area, init_gate, end_gate, area_name)
+                    terminal.boarding.append(area)
+                j += 1
+            LoadAirlines(terminal, terminal_name)
+            bcn.terminals.append(terminal)
+        line = f.readline()
+    f.close()
+    return bcn
+
+def GateOccupancy (bcn):
+    if not bcn:
+        print("Error")
+        return []
+    result = []
+    i = 0
+    while i < len(bcn.terminals):
+        terminal = bcn.terminals[i]
+        j = 0
+        while j < len(terminal.boarding):
+            area = terminal.boarding[j]
+            k = 0
+            while k < len(area.gates):
+                gate = area.gates[k]
+                if gate.ocupado:
+                    status = "Occupied"
+                else:
+                    status = "Free"
+                result.append(gate.name, status, gate.id)
+                k += 1
+            j += 1
+        i += 1
+    return result
+def IsAirlineInTerminal(terminal, name):
+    if name == "" or name == None:
+        print("Error")
+        return -1
+    if not terminal.airlines:
+        print("Error")
+        return False
+    i = 0
+    while i < len(terminal.airlines):
+        airline_name, airline_code = terminal.airlines[i]
+        if airline_name == name or airline_code == name:
+            return True
+        i += 1
+    return False
