@@ -1,5 +1,7 @@
 from fileinput import close
 
+from matplotlib import patches #Para dibujar rectángulos en el gráfico
+
 
 class Gate:
     def __init__(self, name, id, ocupado):
@@ -176,7 +178,6 @@ def SearchTerminal(bcn, name):
 
     # Si terminamos el bucle y no la encontramos, devolvemos un string vacío
     return ""
-
 def AssignGate(bcn, aircraft):
     # 1. Listas de códigos para identificar las zonas
     schengenArea = ["a", "b", "c", "m", "r", "s", "u"]
@@ -239,3 +240,53 @@ def AssignGate(bcn, aircraft):
     # Si termina todo y no encontró hueco
     print("Error: No hay puertas libres de ese tipo")
     return -1
+
+def PlotAirportSchematic(bcn, ax, terminal_filter=None):
+    # Limpiamos el gráfico y ocultamos los ejes numéricos
+    ax.clear()
+    ax.axis('off') 
+    
+    y_offset = 0 # Controla la altura a la que se dibuja cada terminal
+
+    for terminal in bcn.terminals:
+        if terminal_filter is not None and terminal.name != terminal_filter:   
+            continue 
+            
+        # 1. Dibujar la línea principal del Terminal (Tronco horizontal)
+        # Usamos terminal.boarding
+        ax.plot([0, max(len(terminal.boarding) * 2, 2)], [y_offset, y_offset], lw=6, color="#54217E")
+        ax.text(-0.5, y_offset, terminal.name, fontsize=12, fontweight='bold', va='center')
+        
+        # Usamos terminal.boarding
+        for a_idx, area in enumerate(terminal.boarding):
+            x_area = a_idx * 2 + 1
+            # Usamos area.gates
+            num_gates = len(area.gates)
+            y_bottom = y_offset - (num_gates * 0.5) - 0.5
+            
+            # 2. Dibujar el pilar del Área de Embarque (Tronco vertical)
+            ax.plot([x_area, x_area], [y_offset, y_bottom], lw=4, color="#54217E")
+            ax.text(x_area, y_bottom - 0.5, area.name, fontsize=10, ha='center', fontweight='bold')
+            
+            # Usamos area.gates
+            for g_idx, gate in enumerate(area.gates):
+                y_gate = y_offset - (g_idx + 1) * 0.5
+                
+                # 3. Dibujar la "rama" de la puerta
+                ax.plot([x_area, x_area + 0.5], [y_gate, y_gate], lw=2, color="#54217E")
+                
+                # Etiqueta de la puerta (Usamos gate.name en vez de gate.Id)
+                ax.text(x_area + 0.25, y_gate + 0.1, gate.name, fontsize=6, ha='center')
+                
+                color = "#ff0000" if gate.ocupado else "#00ff00" 
+                ax.plot([x_area + 0.55, x_area + 0.75], [y_gate, y_gate], lw=2, color=color)
+                if gate.ocupado and gate.aircraft != "":
+                    ax.text(x_area - 0.2, y_gate, gate.aircraft.aircraft, fontsize=8, color='red', ha='right', va='center')
+        
+        # Usamos terminal.boarding y area.gates
+        if terminal.boarding:
+            y_offset -= (max([len(a.gates) for a in terminal.boarding]) * 0.5 + 3)
+        else:
+            y_offset -= 3
+            
+    ax.autoscale_view()
