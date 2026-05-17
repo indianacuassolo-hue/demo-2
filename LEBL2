@@ -11,7 +11,7 @@ class BoardingArea:
     def __init__(self, name, type):
         self.name = name
         self.type = type
-        self.gate = []
+        self.gates = []
 
 class Terminal:
     def __init__(self, name):
@@ -26,22 +26,19 @@ class BarcelonaAP:
         self.terminals = []
 
 def SetGates (area, init_gate, end_gate, prefix):
-    init_gate = Gate()
-    #f = open("filename.txt", "r")
-    #f.close()
-    #lines = f.readline()
-    #lines = lines.split(" ")
-    #end_gate = len(lines)
-    a = BoardingArea()
-    schengenArea = ["a", "b", "c", "m", "r", "s", "u"]
-    nonschengenArea = ["d", "e", "w", "y"]
-    if init_gate >=end_gate:
+    if init_gate > end_gate:
         print("Error")
         return -1
-    while end_gate >= init_gate:
-        gate_name = prefix + str(init_gate)
-        gate = Gate(gate_name, init_gate, False)
+    
+    current = init_gate
+
+    area.gates = []
+
+    while end_gate >= current:
+        gate_name = prefix + str(current)
+        gate = Gate(gate_name, current, False)
         area.gates.append(gate)
+        current += 1
     return 0
 
 def LoadAirlines (terminal, t_name):
@@ -49,56 +46,83 @@ def LoadAirlines (terminal, t_name):
     try:
         f = open(filename, "r")
     except FileNotFoundError:
-        print("Error")
         return -1
     terminal.airlines = []
-    for line in f:
-        line = line.strip()
-        if line != "":
-            parts = line.split()
-            if len(parts) == 2:
+    line = f.readline()
+    while line != "":
+        linestrip = line.strip()
+        if linestrip != "":
+            parts = linestrip.split("\t")
+            if len(parts) >= 2:
                 airline_name = parts[0]
                 airline_code = parts[1]
-                terminal.airlines.append(airline_name, airline_code)
+                terminal.airlines.append((airline_name, airline_code))
             else:
                 print(f"Line format: {line}")
+        line = f.readline()
     f.close()
     return 0
 def LoadAirportStructure(filename="Terminals.txt"):
     try:
         f = open(filename, "r")
     except FileNotFoundError:
-        print("Error")
-        return -1
+            return 0 
+
     bcn = BarcelonaAP("LEBL")
+    
+    f.readline() 
+    
     line = f.readline()
     while line != "":
-        parts = line.strip().split()
-        if len(parts) == 2:
-            terminal_name = parts[0]
-            num_areas = int(parts[1])
-            terminal = Terminal(terminal_name)
-            j = 0
-            while j < num_areas:
-                area_line = f.readline()
-                area_parts = area_line.strip().split()
-                if len(area_parts) == 4:
-                    area_name = area_parts[0]
-                    area_type = area_parts[1]
-                    init_gate = int(area_parts[2])
-                    end_gate = int(area_parts[3])
-                    area = BoardingArea(area_name, area_type)
-                    SetGates(area, init_gate, end_gate, area_name)
-                    terminal.boarding.append(area)
-                j += 1
-            LoadAirlines(terminal, terminal_name)
-            bcn.terminals.append(terminal)
+        line_stripped = line.strip()
+        
+        if line_stripped != "":
+            parts = line_stripped.split()
+
+            if len(parts) >= 3 and parts[0] == "Terminal":
+                try:
+                    terminal_name = parts[1]
+                    num_areas = int(parts[2])
+                    terminal = Terminal(terminal_name)
+                    
+                    j = 0
+                    while j < num_areas:
+                        area_line = f.readline()
+                        
+                        if area_line == "":
+                            j = num_areas 
+                        else:
+                            area_stripped = area_line.strip()
+                            if area_stripped != "":
+                                area_parts = area_stripped.split()
+                                
+                                if len(area_parts) >= 7:
+                                    area_name = area_parts[1]
+                                    area_type = area_parts[2]
+                                    try:
+                                        init_gate = int(area_parts[4])
+                                        end_gate = int(area_parts[6])
+                                        
+                                        area = BoardingArea(area_name, area_type)
+                                        SetGates(area, init_gate, end_gate, area_name)
+                                        terminal.boarding.append(area)
+                                    except ValueError:
+                                        pass 
+                                
+                                j += 1
+                    
+                    LoadAirlines(terminal, terminal_name)
+                    bcn.terminals.append(terminal)
+                except ValueError:
+                    pass
+            
         line = f.readline()
+        
     f.close()
     return bcn
 
 def GateOccupancy (bcn):
-    if not bcn:
+    if not bcn or bcn == 0 or bcn == -1:
         print("Error")
         return []
     result = []
@@ -115,7 +139,7 @@ def GateOccupancy (bcn):
                     status = "Occupied"
                 else:
                     status = "Free"
-                result.append(gate.name, status, gate.id)
+                result.append((gate.name, status, gate.id))
                 k += 1
             j += 1
         i += 1
@@ -134,10 +158,10 @@ def IsAirlineInTerminal(terminal, name):
             return True
         i += 1
     return False
+
 def SearchTerminal(bcn, name):
     # 'bcn' es un objeto de la clase BarcelonaAP
     # 'name' es el nombre de la aerolínea
-
     i = 0
     # Recorremos la lista de terminales del aeropuerto
     while i < len(bcn.terminals):
@@ -152,7 +176,6 @@ def SearchTerminal(bcn, name):
 
     # Si terminamos el bucle y no la encontramos, devolvemos un string vacío
     return ""
-
 
 def AssignGate(bcn, aircraft):
     # 1. Listas de códigos para identificar las zonas
@@ -191,7 +214,7 @@ def AssignGate(bcn, aircraft):
                 avion_es_schengen = False
                 m = 0
                 while m < len(schengenArea):
-                    if aircraft.destination == schengenArea[m]:
+                    if aircraft.origin == schengenArea[m]:
                         avion_es_schengen = True
                     m += 1
 
