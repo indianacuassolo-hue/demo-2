@@ -210,6 +210,23 @@ def SearchAirlineTerminal():
 
             messagebox.showinfo("Búsqueda de Vuelo", f"¡Aerolínea {aeroline_name} encontrada! Opera en la terminal: {resultado}.")
 
+def MapT1():
+    if not LEBL:
+        messagebox.showerror("Esquema T1", "Carga la estructura de LEBL primero.")
+        return
+    ax = clear_ax()
+    # Pasamos "T1" como filtro para que solo dibuje esa terminal
+    lb.PlotAirportSchematic(LEBL[0], ax, terminal_filter="T1")
+    draw_chart()
+
+def MapT2():
+    if not LEBL:
+        messagebox.showerror("Esquema T2", "Carga la estructura de LEBL primero.")
+        return
+    ax = clear_ax()
+    # Pasamos "T2" como filtro para que solo dibuje esa terminal
+    lb.PlotAirportSchematic(LEBL[0], ax, terminal_filter="T2")
+    draw_chart()
 # --- Chart setup ---
 fig = Figure(figsize=(6, 5), dpi=100)
 
@@ -222,8 +239,9 @@ def draw_chart():
 
 # Finestra
 window = Tk()
-window.title("Airport")
+window.title("Airport Manager")
 window.geometry("1500x700")
+window.state('zoomed')
 window.columnconfigure(0, weight=1)
 window.columnconfigure(1, weight=1)
 window.columnconfigure(2, weight=3)
@@ -333,7 +351,8 @@ Button(scrollable_frame, text="Load Terminals", bg="#F472B6", fg="white", comman
 Button(scrollable_frame, text="Assign Gates", bg="#F472B6", fg="white", command=AssignGates).grid(row=25, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
 Button(scrollable_frame, text="Gate Occupancy", bg="#F472B6", fg="white", command=ShowGateOccupancy).grid(row=26, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
 Button(scrollable_frame, text="Search Flight Terminal", bg="#F472B6", fg="white", command=SearchAirlineTerminal).grid(row=27, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
-
+Button(scrollable_frame, text="Map T1", bg="#F472B6", fg="white", command=MapT1).grid(row=28, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
+Button(scrollable_frame, text="Map T2", bg="#F472B6", fg="white", command=MapT2).grid(row=29, column=0, columnspan=2, padx=5, pady=3, sticky=E+W)
 #Un recuadro en el que muestre si se ejecuta una función correctamente o no.
 
 
