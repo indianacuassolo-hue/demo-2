@@ -134,3 +134,85 @@ def IsAirlineInTerminal(terminal, name):
             return True
         i += 1
     return False
+def SearchTerminal(bcn, name):
+    # 'bcn' es un objeto de la clase BarcelonaAP
+    # 'name' es el nombre de la aerolínea
+
+    i = 0
+    # Recorremos la lista de terminales del aeropuerto
+    while i < len(bcn.terminals):
+        terminal_actual = bcn.terminals[i]
+
+        # Usamos la función que ya creaste para ver si la aerolínea está aquí
+        if IsAirlineInTerminal(terminal_actual, name) == True:
+            # Si la encontramos, devolvemos el nombre de este terminal
+            return terminal_actual.name
+
+        i += 1
+
+    # Si terminamos el bucle y no la encontramos, devolvemos un string vacío
+    return ""
+
+
+def AssignGate(bcn, aircraft):
+    # 1. Listas de códigos para identificar las zonas
+    schengenArea = ["a", "b", "c", "m", "r", "s", "u"]
+    # (Cualquier otra cosa como "d", "e", "w", "y" será No-Schengen)
+
+    # 2. Primero buscamos el nombre del terminal de la aerolínea
+    nombre_terminal = SearchTerminal(bcn, aircraft.airline)
+
+    if nombre_terminal == "":
+        print("Error: Aerolínea no encontrada")
+        return -1
+
+    # 3. Recorremos los terminales para encontrar el objeto terminal
+    i = 0
+    while i < len(bcn.terminals):
+        terminal = bcn.terminals[i]
+
+        if terminal.name == nombre_terminal:
+            # 4. Recorremos las zonas de embarque
+            j = 0
+            while j < len(terminal.boarding):
+                area = terminal.boarding[j]
+
+
+
+                # Miramos si el nombre del área (ej: "a") está en la lista Schengen
+                area_es_schengen = False
+                n = 0
+                while n < len(schengenArea):
+                    if area.name == schengenArea[n]:
+                        area_es_schengen = True
+                    n += 1
+
+                # Miramos si el destino del avión está en la lista Schengen
+                avion_es_schengen = False
+                m = 0
+                while m < len(schengenArea):
+                    if aircraft.destination == schengenArea[m]:
+                        avion_es_schengen = True
+                    m += 1
+
+                # Si ambos son del mismo tipo (los dos True o los dos False)
+                if area_es_schengen == avion_es_schengen:
+
+                    # 5. Buscamos la primera puerta libre en esta área
+                    k = 0
+                    while k < len(area.gates):
+                        puerta = area.gates[k]
+
+                        if puerta.ocupado == False:
+                            # Actualizamos la puerta según el enunciado
+                            puerta.ocupado = True
+                            puerta.aircraft = aircraft  # Guardamos el avión en la puerta
+                            return 0  # Éxito
+
+                        k += 1
+                j += 1
+        i += 1
+
+    # Si termina todo y no encontró hueco
+    print("Error: No hay puertas libres de ese tipo")
+    return -1
